@@ -51,13 +51,21 @@ func NewHTTP() *HTTP {
 // Tidy the URL such that it is minimally valid
 //
 func (self *HTTP) _tidyURL(urlString string) (err error) {
+	LogDebugf("tidyURL input: %s",  urlString)
 	url, err := url.Parse(urlString)
 
 	if self.URL == nil {
+		if len(url.Scheme) == 0 {
+			url.Scheme = "http"
+		}
+		
 		self.URL = url
 	} else {
 		if len(url.Scheme) == 0 {
 			url.Scheme = self.URL.Scheme
+		}
+
+		if len(url.Host) == 0 {
 			url.Host = self.URL.Host
 		}
 
@@ -77,6 +85,7 @@ func (self *HTTP) _tidyURL(urlString string) (err error) {
 			url.Path = path
 		}
 
+		LogDebugf("tidyURL putput: %s",  url)
 		self.URL = url
 	}
 
@@ -146,8 +155,8 @@ func (self *HTTP) prepareAndExecuteRequest(args map[string]string) string {
 	var argBytes *bytes.Buffer = nil
 	if len(args) > 0 {
 		argString := ""
-		for key := range args {
-			argString += key + "=" + "&"
+		for key, val := range args {
+			argString += key + "=" + val + "&"
 		}
 		argBytes = bytes.NewBuffer([]byte(argString))
 	} else {
@@ -242,8 +251,8 @@ func (self *HTTP) handleRedirection() string {
 //
 // Contents: Determine if the contents are JSON
 //
-func (self *HTTP) isHTML() bool {
-	var result bool = false
+func (self *HTTP) isHTML() (result bool) {
+	result = false
 	if strings.HasPrefix(self.ContentType(), "text/html") {
 		result = true
 	}
@@ -254,9 +263,21 @@ func (self *HTTP) isHTML() bool {
 //
 // Contents: Determine if the contents are JSON
 //
-func (self *HTTP) isJSON() bool {
-	var result bool = false
+func (self *HTTP) isJSON() (result bool) {
+	result = false
 	if strings.HasPrefix(self.ContentType(), "application/json") {
+		result = true
+	}
+
+	return result
+}
+
+//
+// Contents: Determine if the contents are XML
+//
+func (self *HTTP) isXML() (result bool) {
+	result = false
+	if strings.HasPrefix(self.ContentType(), "text/xml") {
 		result = true
 	}
 
