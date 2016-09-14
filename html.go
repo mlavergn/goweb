@@ -24,9 +24,9 @@ func (self *HTML) ParseRedirect(d *godom.DOM) string {
 	var result string
 
 	meta := d.Find("meta", nil)
-	if meta != nil {
+	if len(meta) > 0 {
 		LogDebug("META found")
-		value := meta.Attr("content")
+		value := meta[0].Attr("content")
 		token := "http"
 		idx := strings.Index(value, token)
 		if idx > -1 {
@@ -38,6 +38,9 @@ func (self *HTML) ParseRedirect(d *godom.DOM) string {
 	} else {
 		LogDebug("META not found")
 	}
+
+	js := NewJScript()
+	result = js.ParseRedirect(d)
 
 	return result
 }

@@ -51,14 +51,14 @@ func NewHTTP() *HTTP {
 // Tidy the URL such that it is minimally valid
 //
 func (self *HTTP) _tidyURL(urlString string) (err error) {
-	LogDebugf("tidyURL input: %s",  urlString)
+	LogDebugf("tidyURL input: %s", urlString)
 	url, err := url.Parse(urlString)
 
 	if self.URL == nil {
 		if len(url.Scheme) == 0 {
 			url.Scheme = "http"
 		}
-		
+
 		self.URL = url
 	} else {
 		if len(url.Scheme) == 0 {
@@ -85,7 +85,7 @@ func (self *HTTP) _tidyURL(urlString string) (err error) {
 			url.Path = path
 		}
 
-		LogDebugf("tidyURL putput: %s",  url)
+		LogDebugf("tidyURL putput: %s", url)
 		self.URL = url
 	}
 
@@ -107,9 +107,6 @@ func (self *HTTP) Post(urlString string, args map[string]string) string {
 
 	result := self.prepareAndExecuteRequest(args)
 	LogDebugf("\t%d", self.Status())
-	LogDebug("\t" + self.ContentType())
-
-	LogDebug(self.Location())
 
 	return result
 }
@@ -123,9 +120,6 @@ func (self *HTTP) Get(urlString string) string {
 
 	result := self.prepareAndExecuteRequest(nil)
 	LogDebugf("\t%d", self.Status())
-	LogDebug("\t" + self.ContentType())
-
-	LogDebug(self.Location())
 
 	return result
 }
