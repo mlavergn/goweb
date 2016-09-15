@@ -30,7 +30,7 @@ func (self *JScript) ParseRedirect(d *godom.DOM) string {
 		re, _ := regexp.Compile("document.location\\s?=\\s?['\"](.+)[\"'];")
 
 		for _, script := range scripts {
-			match := re.FindStringSubmatch(script.Text())
+			match := re.FindStringSubmatch(script.Text)
 			if len(match) > 1 {
 				result = match[1]
 			}
