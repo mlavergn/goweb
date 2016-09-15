@@ -16,15 +16,21 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
+	"crypto/tls"
 	"strconv"
 	"strings"
 )
 
-type Enum string
-
 const (
 	HTTP_GET  = "GET"
 	HTTP_POST = "POST"
+)
+
+const (
+	CONTENT_TYPE_DEFAULT     = ""
+	CONTENT_TYPE_FORM        = "application/x-www-form-urlencoded"
+	CONTENT_TYPE_JSON        = "application/json"
+	CONTENT_TYPE_FORM_MULTI  = "multipart/form-data"
 )
 
 type HTTP struct {
@@ -101,11 +107,35 @@ func (self *HTTP) URLString() (urlString string) {
 //
 // Fetch: POST request
 //
-func (self *HTTP) Post(urlString string, args map[string]string) string {
+func (self *HTTP) Post(urlString string, args map[string]string) (result string) {
+	content := _formatArgs(args)
+	result =  self.PostContent(urlString, CONTENT_TYPE_DEFAULT, content)
+
+	return result
+}
+
+func (self *HTTP) PostString(urlString string, contentType string, contentString string) (result string) {
+	content := bytes.NewBuffer([]byte(contentString))
+	result =  self.PostContent(urlString, contentType, content)
+
+	return result
+}
+
+func (self *HTTP) PostData(urlString string, contentType string, contentBytes []byte) (result string) {
+	content := bytes.NewBuffer(contentBytes)
+	result =  self.PostContent(urlString, contentType, content)
+
+	return result
+}
+
+//
+// Fetch: POST request
+//
+func (self *HTTP) PostContent(urlString string, contentType string, content *bytes.Buffer) (result string) {
 	self.Method = HTTP_POST
 	self._tidyURL(urlString)
 
-	result := self.prepareAndExecuteRequest(args)
+	result = self.prepareAndExecuteRequest(contentType, content)
 	LogDebugf("\t%d", self.Status())
 
 	return result
@@ -114,21 +144,38 @@ func (self *HTTP) Post(urlString string, args map[string]string) string {
 //
 // Fetch: GET request
 //
-func (self *HTTP) Get(urlString string) string {
+func (self *HTTP) Get(urlString string) (result string) {
 	self.Method = HTTP_GET
 	self._tidyURL(urlString)
 
-	result := self.prepareAndExecuteRequest(nil)
+	result = self.prepareAndExecuteRequest(CONTENT_TYPE_DEFAULT, nil)
 	LogDebugf("\t%d", self.Status())
 
 	return result
 }
 
 //
+//
+//
+func _formatArgs(args map[string]string) (content *bytes.Buffer) {
+	if len(args) > 0 {
+		argString := ""
+		for key, val := range args {
+			argString += key + "=" + val + "&"
+		}
+		content = bytes.NewBuffer([]byte(argString))
+	} else {
+		content = bytes.NewBuffer([]byte(""))
+	}
+
+	return content
+}
+
+//
 // Fetch: Prepare and execute HTTP request
 // NOTE: This is the work horse, all requests filter through here
 //
-func (self *HTTP) prepareAndExecuteRequest(args map[string]string) string {
+func (self *HTTP) prepareAndExecuteRequest(contentType string, content *bytes.Buffer) string {
 	LogDebug(self.Method + ": " + self.URLString())
 
 	RedirectAttemptedError := errors.New("redirect")
@@ -141,24 +188,20 @@ func (self *HTTP) prepareAndExecuteRequest(args map[string]string) string {
 		Jar: self.cookieJar,
 	}
 
+	// if we're proxying, we're going to disable the TLS cert verification
 	if self.detectProxy() {
 		self.ProxyURL, _ = url.Parse("http://127.0.0.1:8080")
-		client.Transport = &http.Transport{Proxy: http.ProxyURL(self.ProxyURL)}
-	}
-
-	var argBytes *bytes.Buffer = nil
-	if len(args) > 0 {
-		argString := ""
-		for key, val := range args {
-			argString += key + "=" + val + "&"
+		client.Transport = &http.Transport{
+			Proxy: http.ProxyURL(self.ProxyURL),
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 		}
-		argBytes = bytes.NewBuffer([]byte(argString))
-	} else {
-		argBytes = bytes.NewBuffer([]byte(""))
 	}
 
-	self.req, _ = http.NewRequest(self.Method, self.URLString(), argBytes)
+	self.req, _ = http.NewRequest(self.Method, self.URLString(), content)
 
+	if len(contentType) > 0 {
+		self.req.Header.Add("Content-Type", contentType)
+	}
 	self.req.Header.Add("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12) AppleWebKit/602.1.50 (KHTML, like Gecko) Version/10.0 Safari/602.1.50")
 	// self.req.Header.Add("Referer", referrer)
 	var err error

@@ -20,9 +20,7 @@ func NewHTML() *HTML {
 	return &HTML{}
 }
 
-func (self *HTML) ParseRedirect(d *godom.DOM) string {
-	var result string
-
+func (self *HTML) ParseRedirect(d *godom.DOM) (result string) {
 	meta := d.Find("meta", nil)
 	if len(meta) > 0 {
 		LogDebug("META found")
@@ -39,8 +37,10 @@ func (self *HTML) ParseRedirect(d *godom.DOM) string {
 		LogDebug("META not found")
 	}
 
-	js := NewJScript()
-	result = js.ParseRedirect(d)
+	if len(result) == 0 {
+		js := NewJScript()
+		result = js.ParseRedirect(d)
+	}
 
 	return result
 }
