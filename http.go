@@ -197,6 +197,11 @@ func (self *HTTP) prepareAndExecuteRequest(contentType string, content *bytes.Bu
 		}
 	}
 
+	// ensure we don't pass a nil ByteBuffer into http.NewRequest
+	if content == nil {
+		content = bytes.NewBuffer([]byte(""))
+	}
+
 	self.req, _ = http.NewRequest(self.Method, self.URLString(), content)
 
 	if len(contentType) > 0 {
