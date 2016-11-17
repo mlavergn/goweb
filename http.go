@@ -48,7 +48,7 @@ type HTTP struct {
 	cookieJar http.CookieJar
 	req       *http.Request
 	resp      *http.Response
-	Contents  string
+	RawContents []byte
 }
 
 //
@@ -59,6 +59,10 @@ func NewHTTP() *HTTP {
 	id.cookieJar, _ = cookiejar.New(nil)
 
 	return id
+}
+
+func (id *HTTP) Contents() string {
+	return string(id.RawContents)
 }
 
 //
@@ -239,18 +243,18 @@ func (id *HTTP) prepareAndExecuteRequest(contentType string, content *bytes.Buff
 		LogFatal(err)
 	} else {
 		bytes, _ := ioutil.ReadAll(id.resp.Body)
-		id.Contents = string(bytes)
+		id.RawContents = bytes
 	}
 	// defer s.resp.Body.Close()
 
 	// at this point we have the request and response, save a record if configured
-	output := "<!--\nMethod: " + id.Method + "\nURL: " + id.URLString() + "\nStatus: " + strconv.Itoa(id.Status()) + "\n-->\n\n" + id.Contents
+	output := "<!--\nMethod: " + id.Method + "\nURL: " + id.URLString() + "\nStatus: " + strconv.Itoa(id.Status()) + "\n-->\n\n" + id.Contents()
 	LogDumpFile("mnet", output)
 
 	// handle redirects
 	id.handleRedirection()
 
-	return id.Contents
+	return id.Contents()
 }
 
 //
@@ -283,7 +287,7 @@ func (id *HTTP) handleRedirection() string {
 			LogDebug("HTML detected")
 			h := NewHTML()
 			s := godom.NewDOM()
-			s.SetContents(id.Contents)
+			s.SetContents(id.Contents())
 			url := h.ParseRedirect(s)
 			if len(url) > 0 {
 				id.Get(url)
@@ -293,11 +297,11 @@ func (id *HTTP) handleRedirection() string {
 			LogDebug("JSON detected")
 			data := id.JSON()
 			if len(data) > 0 {
-				result = id.Contents
+				result = id.Contents()
 			}
 		} else {
 			LogDebug("Unhandled content type detected: " + id.ContentType())
-			result = id.Contents
+			result = id.Contents()
 		}
 		break
 	case 302:
@@ -350,14 +354,25 @@ func (id *HTTP) isXML() (result bool) {
 }
 
 //
+// Contents: Determine if the contents are XML
+//
+func (id *HTTP) isImage() (result bool) {
+	result = false
+	if strings.HasPrefix(id.ContentType(), "image/") {
+		result = true
+	}
+
+	return result
+}
+
+//
 // Contents: Marshall contents from JSON to a map if possible
 //
 func (id *HTTP) JSON() map[string]interface{} {
 	var result map[string]interface{}
 
 	if id.isJSON() {
-		bytes := []byte(id.Contents)
-		json.Unmarshal(bytes, &result)
+		json.Unmarshal(id.RawContents, &result)
 	}
 	return result
 }
