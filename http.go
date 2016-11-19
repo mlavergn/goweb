@@ -103,7 +103,7 @@ func (id *HTTP) tidyURL(urlString string) (err error) {
 			url.Path = path
 		}
 
-		LogDebugf("tidyURL putput: %s", url)
+		LogDebugf("tidyURL output: %s", url)
 		id.URL = url
 	}
 
@@ -295,8 +295,8 @@ func (id *HTTP) handleRedirection() string {
 			}
 		} else if id.isJSON() {
 			LogDebug("JSON detected")
-			data := id.JSON()
-			if len(data) > 0 {
+			_, err := id.JSON()
+			if err == nil {
 				result = id.Contents()
 			}
 		} else {
@@ -368,13 +368,10 @@ func (id *HTTP) isImage() (result bool) {
 //
 // Contents: Marshall contents from JSON to a map if possible
 //
-func (id *HTTP) JSON() map[string]interface{} {
-	var result map[string]interface{}
+func (id *HTTP) JSON() (result map[string]interface{}, err error) {
+	err = json.Unmarshal(id.RawContents, &result)
 
-	if id.isJSON() {
-		json.Unmarshal(id.RawContents, &result)
-	}
-	return result
+	return
 }
 
 //
