@@ -14,7 +14,6 @@ import (
 	. "golog"
 	"io/ioutil"
 	"math/rand"
-	"net"
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
@@ -49,6 +48,8 @@ type HTTP struct {
 	req       *http.Request
 	resp      *http.Response
 	RawContents []byte
+
+	gaeRequest *http.Request
 }
 
 //
@@ -59,6 +60,10 @@ func NewHTTP() *HTTP {
 	id.cookieJar, _ = cookiejar.New(nil)
 
 	return id
+}
+
+func (id *HTTP) SetGAERequest(req *http.Request) {
+	id.gaeRequest = req
 }
 
 func (id *HTTP) Contents() string {
@@ -205,16 +210,14 @@ func (id *HTTP) prepareAndExecuteRequest(contentType string, content *bytes.Buff
 
 	RedirectAttemptedError := errors.New("redirect")
 
-	client := &http.Client{
-		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			// return http.ErrUseLastResponse -- Go 1.7+ only
+	client := GetClient(id.gaeRequest)
+	client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
 			return RedirectAttemptedError
-		},
-		Jar: id.cookieJar,
 	}
+	client.Jar = id.cookieJar
 
 	// if we're proxying, we're going to disable the TLS cert verification
-	if id.detectProxy() {
+	if DetectProxy() {
 		id.ProxyURL, _ = url.Parse("http://127.0.0.1:8080")
 		client.Transport = &http.Transport{
 			Proxy:           http.ProxyURL(id.ProxyURL),
@@ -255,23 +258,6 @@ func (id *HTTP) prepareAndExecuteRequest(contentType string, content *bytes.Buff
 	id.handleRedirection()
 
 	return id.Contents()
-}
-
-//
-// Handler: proxies
-// Assumes a local HTTP proxy is anything listening locally on port 8080
-//
-func (id *HTTP) detectProxy() bool {
-	result := true
-
-	conn, err := net.Dial("tcp", "127.0.0.1:8080")
-	if err != nil {
-		result = false
-	} else {
-		conn.Close()
-	}
-
-	return result
 }
 
 //
