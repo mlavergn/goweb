@@ -5,13 +5,12 @@
 package goweb
 
 import (
+	. "golog"
 	"bytes"
 	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"godom"
-	. "golog"
 	"io/ioutil"
 	"math/rand"
 	"net/http"
@@ -272,7 +271,7 @@ func (id *HTTP) handleRedirection() string {
 		if id.isHTML() {
 			LogDebug("HTML detected")
 			h := NewHTML()
-			s := godom.NewDOM()
+			s := NewDOM()
 			s.SetContents(id.Contents())
 			url := h.ParseRedirect(s)
 			if len(url) > 0 {

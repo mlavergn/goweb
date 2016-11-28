@@ -9,7 +9,7 @@ import (
   "testing"
 )
 
-func TestDOMSetContents(t *testing.T) {
+func TestTidyJSON(t *testing.T) {
   SetLogLevel(LOG_DEBUG)
   r := TidyJSON("var x = {abc:123, def:\"789\"}")
   LogDebug(len(r))

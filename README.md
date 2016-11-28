@@ -6,6 +6,7 @@ Wraps net/http into a higer level class that handles the following:
 * Cookies
 * Relative URLs
 * JSON structures
+* DOM parsing
 
 Backwards compatibility to Golang 1.4 is currently being maintained.
 --
@@ -13,4 +14,4 @@ Backwards compatibility to Golang 1.4 is currently being maintained.
 This project is currently unstable while the API is refined.
 --
 Dependencies:
-This package depends on golog and godom.
+This package depends on golog

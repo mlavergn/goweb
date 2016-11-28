@@ -5,7 +5,6 @@
 package goweb
 
 import (
-	"godom"
 	. "golog"
 	"regexp"
 )
@@ -20,7 +19,7 @@ func NewJScript() *JScript {
 	return &JScript{}
 }
 
-func (self *JScript) ParseRedirect(d *godom.DOM) string {
+func (self *JScript) ParseRedirect(d *DOM) string {
 	var result string
 
 	scripts := d.Find("script", nil)

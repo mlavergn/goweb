@@ -5,7 +5,6 @@
 package goweb
 
 import (
-	"godom"
 	. "golog"
 	"strings"
 )
@@ -20,7 +19,7 @@ func NewHTML() *HTML {
 	return &HTML{}
 }
 
-func (self *HTML) ParseRedirect(d *godom.DOM) (result string) {
+func (self *HTML) ParseRedirect(d *DOM) (result string) {
 	meta := d.Find("meta", nil)
 	if len(meta) > 0 {
 		LogDebug("META found")
