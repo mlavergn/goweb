@@ -19,6 +19,9 @@ func NewJScript() *JScript {
 	return &JScript{}
 }
 
+//
+//
+//
 func (self *JScript) ParseRedirect(d *DOM) string {
 	var result string
 

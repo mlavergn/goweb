@@ -9,11 +9,22 @@ import (
   "testing"
 )
 
-func TestTidyJSON(t *testing.T) {
+func TestIsolateJSON(t *testing.T) {
   SetLogLevel(LOG_DEBUG)
-  r := TidyJSON("var x = {abc:123, def:\"789\"}")
-  LogDebug(len(r))
-  if len(r) != 27 {
-    t.Errorf("JSON string lenght %d vs expected %d",len(r), 27)
+  r, _ := IsolateJSON("var x = {abc:123, def:\"789\"};\nvar y = [1, 2, 3+4];", JSONDictionaryType)
+  if len(r) != 20 {
+    t.Errorf("JSON string length %d vs expected %d [%s]",len(r), 20, r)
+  }
+}
+
+func TestExtractJSON(t *testing.T) {
+  SetLogLevel(LOG_DEBUG)
+  r, err := ExtractJSON("var x = {abc:123, def:\"789\"}", JSONDictionaryType)
+  if err != nil {
+    t.Errorf("Error %s [%s]", err, r)
+  } else {
+    if len(r) != 2 {
+      t.Errorf("JSON map length %d vs expected %d [%s]",len(r), 2, r)
+    }
   }
 }

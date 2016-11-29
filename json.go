@@ -19,8 +19,10 @@ const (
 	JSONUnknownType
 )
 
-var JSONArrayDelimiter = []string{"[", "]"}
-var JSONDictionaryDelimiter = []string{"{", "}"}
+type _JSONDelimiter []string
+
+var _JSONArrayDelimiter = []string{"[", "]"}
+var _JSONDictionaryDelimiter = []string{"{", "}"}
 
 //
 // IdentifityJSONFragment
@@ -30,12 +32,12 @@ func IdentifityJSONFragment(jsonString string) (result int, index int) {
   index = -1
 
 	arrDelimiterIndex := -1
-	dictDelimiterIndex := strings.Index(jsonString, JSONDictionaryDelimiter[0])
+	dictDelimiterIndex := strings.Index(jsonString, _JSONDictionaryDelimiter[0])
 	if dictDelimiterIndex == 0 {
 		result = JSONDictionaryType
     index = dictDelimiterIndex
 	} else {
-		arrDelimiterIndex = strings.Index(jsonString, JSONArrayDelimiter[0])
+		arrDelimiterIndex = strings.Index(jsonString, _JSONArrayDelimiter[0])
 		if dictDelimiterIndex == -1 && arrDelimiterIndex >= 0 {
 			result = JSONArrayType
       index = arrDelimiterIndex
@@ -57,7 +59,7 @@ func IdentifityJSONFragment(jsonString string) (result int, index int) {
 //
 // ToJSON
 //
-func ToJSON(jsonMap JSONMapType) (result string) {
+func ToJSON(jsonMap JSONMapType) (result string, err error) {
 	jsonBytes, err := json.Marshal(jsonMap)
 	if err != nil {
 		LogError(err)
@@ -71,16 +73,9 @@ func ToJSON(jsonMap JSONMapType) (result string) {
 //
 // FromJSON
 //
-func FromJSON(jsonString string) (result JSONMapType) {
+func FromJSON(jsonString string) (result JSONMapType, err error) {
 	bytes := []byte(jsonString)
-	err := json.Unmarshal(bytes, &result)
-	if err == nil {
-		if strings.HasPrefix(err.Error(), "invalid character ") {
-			jsonString = TidyJSON(jsonString)
-			bytes = []byte(jsonString)
-			err = json.Unmarshal(bytes, &result)
-		}
-	}
+	err = json.Unmarshal(bytes, &result)
 
 	if err == nil {
 		LogError(err)
@@ -90,48 +85,96 @@ func FromJSON(jsonString string) (result JSONMapType) {
 }
 
 //
-// TidyJSON
+// FromJSON
 //
-func TidyJSON(jsonString string) (result string) {
-	var delimiter []string = nil
-  jsonType, delimiterIndex := IdentifityJSONFragment(jsonString)
+func ExtractJSON(jsonString string, jsonType int) (result JSONMapType, err error) {
+  // unmarshall is strict and wants complete JSON structures
+  jsonString, jsonType = IsolateJSON(jsonString, jsonType)
+  result, err = FromJSON(jsonString)
+  if err != nil {
+    jsonString = TidyScript(jsonString)
+    result, err = FromJSON(jsonString)
+    if err != nil {
+      jsonString = TidyJSON(jsonString, jsonType)
+      result, err = FromJSON(jsonString)
+    }
+  }
 
-	switch jsonType {
-	case JSONArrayType:
-		delimiter = JSONArrayDelimiter
-	case JSONDictionaryType:
-		delimiter = JSONDictionaryDelimiter
+  return
+}
+
+func IsolateJSON(jsonString string, jsonTypeIn int) (result string, jsonType int) {
+  var delimiter []string = nil
+  var delimiterIndex int
+
+  if jsonTypeIn == JSONUnknownType {
+    jsonType, delimiterIndex = IdentifityJSONFragment(jsonString)
+  } else {
+    jsonType = jsonTypeIn
+    delimiterIndex = strings.Index(jsonString, _JSONDictionaryDelimiter[0])
+
+  }
+
+  switch jsonType {
+  case JSONArrayType:
+    delimiter = _JSONArrayDelimiter
+  case JSONDictionaryType:
+    delimiter = _JSONDictionaryDelimiter
   default:
     return
-	}
+  }
 
   if delimiterIndex > 0 {
-    jsonString = jsonString[delimiterIndex:]
+    result = jsonString[delimiterIndex:]
   }
 
-  delimiterIndex = strings.Index(jsonString, delimiter[1])
+  delimiterIndex = strings.Index(result, delimiter[1])
   if delimiterIndex >= 0 {
-    jsonString = jsonString[:delimiterIndex+1]
+    result = result[:delimiterIndex+1]
   }
+
+  return
+}
+
+//
+// TidyScript
+//
+func TidyScript(jsonString string) (result string) {
+  // no newlines
+  result = strings.Replace(jsonString, "\n", "", -1)
+  // no tabs
+  result = strings.Replace(result, "\t", "", -1)
+
+  return
+}
+
+//
+// TidyJSON
+//
+func TidyJSON(jsonString string, jsonType int) (result string) {
+  jsonString = TidyScript(jsonString)
 
 	// JSON improper escaping detected - need to split the string and tidy it
-	jsonTidy := delimiter[0]
+	var jsonDelimiter []string
   if jsonType == JSONDictionaryType {
     // dictionary cleanup
+    jsonDelimiter = _JSONDictionaryDelimiter
+    result = jsonDelimiter[0]
   	entries := strings.Split(jsonString[1:len(jsonString)-1], ",")
   	for _, entry := range entries {
   		val := strings.Split(entry, ":")
-  		jsonTidy += fmt.Sprintf("\"%s\": \"%s\",", strings.Trim(val[0], " '\""), strings.Trim(val[1], " '\""))
+  		result += fmt.Sprintf("\"%s\": \"%s\",", strings.Trim(val[0], " '\""), strings.Trim(val[1], " '\""))
   	}
   } else {
     // array
+    jsonDelimiter = _JSONArrayDelimiter
+    result = jsonDelimiter[0]
     entries := strings.Split(jsonString[1:len(jsonString)-1], ",")
     for _, entry := range entries {
-      jsonTidy += fmt.Sprintf("\"%s\",", strings.Trim(entry, " '"))
+      result += fmt.Sprintf("\"%s\",", strings.Trim(entry, " '"))
     }
   }
-	jsonTidy = jsonTidy[:len(jsonTidy)-1] + delimiter[1]
-	result = jsonTidy
+	result = result[:len(result)-1] + jsonDelimiter[1]
 
 	return result
 }

@@ -6,7 +6,6 @@ package goweb
 
 import (
 	. "golog"
-	"encoding/json"
 	"fmt"
 	"golang.org/x/net/html"
 	"strings"
@@ -16,14 +15,7 @@ import (
 // DOMNodeAttributes map of strings keyed by strings
 type DOMNodeAttributes map[string]string
 
-// JSONMap map of interface keyed by strings
-type JSONMap map[string]interface{}
-
-type JSONDelimiter []string
-
-var JSONArrayDelimiterPrivate = JSONDelimiter{"[", "]"}
-var JSONDictionaryDelimiterPrivate = JSONDelimiter{"{", "}"}
-
+//
 // DOMNode def
 //
 type DOMNode struct {
@@ -437,67 +429,26 @@ func (id *DOM) ChildFindTextForClass(parent *DOMNode, tag string, class string) 
 //
 // FindJSONForScriptWithKey : Find the JSON key with text containing substring
 //
-func (id *DOM) FindJSONForScriptWithKey(substring string) (result JSONMap, err error) {
-	return id.ChildFindJSONForScriptWithKeyDelimiter(id.RootNode(), substring, JSONDictionaryDelimiterPrivate)
+func (id *DOM) FindJSONForScriptWithKey(substring string) (result JSONMapType, err error) {
+	return id.ChildFindJSONForScriptWithKeyDelimiter(id.RootNode(), substring, JSONDictionaryType)
 }
 
-func (id *DOM) FindJSONForScriptWithKeyDelimiter(substring string, delimiter JSONDelimiter) (result JSONMap, err error) {
-	return id.ChildFindJSONForScriptWithKeyDelimiter(id.RootNode(), substring, delimiter)
+func (id *DOM) FindJSONForScriptWithKeyDelimiter(substring string, jsonType int) (result JSONMapType, err error) {
+	return id.ChildFindJSONForScriptWithKeyDelimiter(id.RootNode(), substring, jsonType)
 }
 
 //
 // ChildFindJSONForScriptWithKey : Find the child JSON key with text containing substring
 //
-func (id *DOM) ChildFindJSONForScriptWithKeyDelimiter(parent *DOMNode, substring string, delimiter JSONDelimiter) (result JSONMap, err error) {
+func (id *DOM) ChildFindJSONForScriptWithKeyDelimiter(parent *DOMNode, substring string, jsonType int) (result JSONMapType, err error) {
 	nodes := id.ChildFindWithKey(parent, "script", substring)
 
 	if len(nodes) > 0 {
 		contents := nodes[0].Text()
 		idx := strings.Index(contents, substring)
 		sub := contents[idx:]
-		idx = strings.Index(sub, delimiter[1])
-		if idx >= 0 {
-			sub = sub[:idx+1]
-		}
 
-		// unmarshall is strict and wants complete JSON structures
-		if !strings.HasPrefix(sub, delimiter[0]) {
-			idx = strings.Index(sub, delimiter[0])
-			if idx > 0 {
-				sub = sub[idx:]
-			} else {
-				sub = delimiter[0] + sub + delimiter[1]
-			}
-		}
-
-		// no newlines
-		sub = strings.Replace(sub, "\n", "", -1)
-		// no tabs
-		sub = strings.Replace(sub, "\t", "", -1)
-
-		bytes := []byte(sub)
-		err = json.Unmarshal(bytes, &result)
-		if err != nil {
-			if strings.HasPrefix(err.Error(), "invalid character ") {
-				// JSON improper escaping detected - need to split the string and tidy it
-				LogDebug("Tidy JSON")
-				subtidy := delimiter[0]
-				entries := strings.Split(sub[1:len(sub)-1], ",")
-				for _, entry := range entries {
-					val := strings.Split(entry, ":")
-					subtidy += fmt.Sprintf("\"%s\": \"%s\",", strings.Trim(val[0], " '"), strings.Trim(val[1], " '"))
-				}
-				subtidy = subtidy[:len(subtidy)-1] + delimiter[1]
-
-				bytes := []byte(subtidy)
-				err = json.Unmarshal(bytes, &result)
-			}
-		}
-
-		// we may have reset err above, so recheck
-		if err != nil {
-			LogError(err, "\n", sub)
-		}
+		result, err = ExtractJSON(sub, jsonType)
 	}
 
 	return
