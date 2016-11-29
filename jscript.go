@@ -5,8 +5,12 @@
 package goweb
 
 import (
+	"go/ast"
+	"go/parser"
+	"go/token"
 	. "golog"
 	"regexp"
+	"strconv"
 )
 
 type JScript struct {
@@ -47,4 +51,65 @@ func (self *JScript) ParseRedirect(d *DOM) string {
 	}
 
 	return result
+}
+
+func EvaluateEquation(javascript string) (result int, err error) {
+	var stxTree ast.Expr
+	stxTree, err = parser.ParseExpr(javascript)
+	if err == nil {
+		result = eval(stxTree)
+	} else {
+		LogError(err)
+	}
+
+	return
+}
+
+func eval(expr ast.Expr) (result int) {
+	switch expr := expr.(type) {
+	case *ast.ParenExpr:
+		result = eval(expr.X)
+	case *ast.BinaryExpr:
+		result = evalBinaryExpr(expr)
+	case *ast.UnaryExpr:
+		result = evalUnaryExpr(expr)
+	case *ast.BasicLit:
+		switch expr.Kind {
+		case token.INT:
+			result, _ = strconv.Atoi(expr.Value)
+		}
+	}
+
+	return
+}
+
+func evalBinaryExpr(expr *ast.BinaryExpr) (result int) {
+	x := eval(expr.X)
+	y := eval(expr.Y)
+
+	switch expr.Op {
+	case token.MUL:
+		result = x * y
+	case token.QUO:
+		result = x / y
+	case token.ADD:
+		result = x + y
+	case token.SUB:
+		result = x - y
+	}
+
+	return
+}
+
+func evalUnaryExpr(expr *ast.UnaryExpr) (result int) {
+	x := eval(expr.X)
+
+	switch expr.Op {
+	case token.ADD:
+		result = x
+	case token.SUB:
+		result = x * -1
+	}
+
+	return
 }
