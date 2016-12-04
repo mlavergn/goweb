@@ -5,9 +5,9 @@
 package goweb
 
 import (
-	. "golog"
 	"fmt"
 	"golang.org/x/net/html"
+	. "golog"
 	"strings"
 	"sync"
 )

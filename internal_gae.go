@@ -3,27 +3,26 @@
 package goweb
 
 import (
-  "net/http"
-  "appengine"
-  "appengine/urlfetch"
+	"appengine"
+	"appengine/urlfetch"
+	"net/http"
 )
 
 //
 // GetClient GAE uses port 8080, so deny proxing for now
 //
 func GetClient(r *http.Request) (client *http.Client) {
-  ctx := appengine.NewContext(r)
-  client = urlfetch.Client(ctx)
+	ctx := appengine.NewContext(r)
+	client = urlfetch.Client(ctx)
 
-  return
+	return
 }
 
 //
 // DetectProxy GAE uses port 8080, so deny proxing for now
 //
 func DetectProxy() (result bool) {
-  result = false
+	result = false
 
-  return
+	return
 }
-
