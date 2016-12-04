@@ -5,12 +5,12 @@
 package goweb
 
 import (
-	. "golog"
 	"bytes"
 	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
+	. "golog"
 	"io/ioutil"
 	"math/rand"
 	"net/http"
@@ -40,12 +40,12 @@ var HTTP_USER_AGENT = []string{
 }
 
 type HTTP struct {
-	Method    string
-	URL       *url.URL
-	ProxyURL  *url.URL
-	cookieJar http.CookieJar
-	req       *http.Request
-	resp      *http.Response
+	Method      string
+	URL         *url.URL
+	ProxyURL    *url.URL
+	cookieJar   http.CookieJar
+	req         *http.Request
+	resp        *http.Response
 	RawContents []byte
 
 	gaeRequest *http.Request
@@ -211,7 +211,7 @@ func (id *HTTP) prepareAndExecuteRequest(contentType string, content *bytes.Buff
 
 	client := GetClient(id.gaeRequest)
 	client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
-			return RedirectAttemptedError
+		return RedirectAttemptedError
 	}
 	client.Jar = id.cookieJar
 
@@ -251,7 +251,7 @@ func (id *HTTP) prepareAndExecuteRequest(contentType string, content *bytes.Buff
 
 	// at this point we have the request and response, save a record if configured
 	output := "<!--\nMethod: " + id.Method + "\nURL: " + id.URLString() + "\nStatus: " + strconv.Itoa(id.Status()) + "\n-->\n\n" + id.Contents()
-	LogDumpFile("mnet", output)
+	LogDumpFile("goweb", output)
 
 	// handle redirects
 	id.handleRedirection()
@@ -385,6 +385,13 @@ func (id *HTTP) Status() int {
 //
 func (id *HTTP) Location() string {
 	return id.getHeaderValue("Location")
+}
+
+//
+// Header: Extract Referer
+//
+func (id *HTTP) Referer() string {
+	return id.getHeaderValue("Referer")
 }
 
 //
