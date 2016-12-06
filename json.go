@@ -118,7 +118,7 @@ func ExtractJSON(jsonString string, jsonType int) (result JSONMapType, err error
 //
 func IsolateJSON(jsonString string, jsonTypeIn int) (result string, jsonType int) {
 	var delimiter []string = nil
-	var delimiterIndex int
+	delimiterIndex := -1
 
 	if jsonTypeIn == JSONUnknownType {
 		jsonType, delimiterIndex = IdentifityJSONFragment(jsonString)
@@ -137,13 +137,12 @@ func IsolateJSON(jsonString string, jsonTypeIn int) (result string, jsonType int
 		return
 	}
 
-	if delimiterIndex > 0 {
-		result = jsonString[delimiterIndex:]
-	}
-
-	delimiterIndex = strings.Index(result, delimiter[1])
 	if delimiterIndex >= 0 {
-		result = result[:delimiterIndex+1]
+		result = jsonString[delimiterIndex:]
+		delimiterIndex = strings.Index(result, delimiter[1])
+		if delimiterIndex >= 0 {
+			result = result[:delimiterIndex+1]
+		}
 	}
 
 	return
@@ -166,26 +165,33 @@ func TidyScript(jsonString string) (result string) {
 //
 func TidyJSON(jsonString string, jsonType int) (result string) {
 	// JSON improper escaping detected - need to split the string and tidy it
-	var jsonDelimiter []string
-	if jsonType == JSONDictionaryType {
-		// dictionary cleanup
-		jsonDelimiter = _JSONDictionaryDelimiter
-		entries := strings.Split(jsonString[1:len(jsonString)-1], ",")
-		for _, entry := range entries {
-			val := strings.Split(entry, ":")
-			result += fmt.Sprintf("\"%s\": \"%s\",", strings.Trim(val[0], " '\""), strings.Trim(val[1], " '\""))
+	if len(jsonString) > 1 { 
+		var jsonDelimiter []string
+		if jsonType == JSONDictionaryType {
+			// dictionary cleanup
+			jsonDelimiter = _JSONDictionaryDelimiter
+			entries := strings.Split(jsonString[1:len(jsonString)-1], ",")
+			for _, entry := range entries {
+				val := strings.Split(entry, ":")
+				if len(val) >= 2 {
+					result += fmt.Sprintf("\"%s\": \"%s\",", strings.Trim(val[0], " '\""), strings.Trim(val[1], " '\""))
+				}
+			}
+		} else {
+			// array
+			jsonDelimiter = _JSONArrayDelimiter
+			entries := strings.Split(jsonString[1:len(jsonString)-1], ",")
+			for _, entry := range entries {
+				result += fmt.Sprintf("\"%s\",", strings.Trim(entry, " '"))
+			}
 		}
-	} else {
-		// array
-		jsonDelimiter = _JSONArrayDelimiter
-		entries := strings.Split(jsonString[1:len(jsonString)-1], ",")
-		for _, entry := range entries {
-			result += fmt.Sprintf("\"%s\",", strings.Trim(entry, " '"))
+
+		// reconstitute the result dropping the last comma
+		resultLen := len(result)
+		if resultLen > 1 {
+			result = jsonDelimiter[0] + result[:resultLen-1] + jsonDelimiter[1]
 		}
 	}
-
-	// reconstitute the result dropping the last comma
-	result = jsonDelimiter[0] + result[:len(result)-1] + jsonDelimiter[1]
 
 	return result
 }
