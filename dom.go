@@ -433,22 +433,64 @@ func (id *DOM) FindJSONForScriptWithKey(substring string) (result JSONMapType, e
 	return id.ChildFindJSONForScriptWithKeyDelimiter(id.RootNode(), substring, JSONDictionaryType)
 }
 
+//
+// FindJSONForScriptWithKeyDelimiter : Find the JSON key with text containing substring
+//
 func (id *DOM) FindJSONForScriptWithKeyDelimiter(substring string, jsonType int) (result JSONMapType, err error) {
 	return id.ChildFindJSONForScriptWithKeyDelimiter(id.RootNode(), substring, jsonType)
 }
 
 //
-// ChildFindJSONForScriptWithKey : Find the child JSON key with text containing substring
+// ChildFindJSONForScriptWithKeyDelimiter : Find the child JSON key with text containing substring
 //
 func (id *DOM) ChildFindJSONForScriptWithKeyDelimiter(parent *DOMNode, substring string, jsonType int) (result JSONMapType, err error) {
 	nodes := id.ChildFindWithKey(parent, "script", substring)
 
-	if len(nodes) > 0 {
-		contents := nodes[0].Text()
+	for _, node := range nodes {
+		contents := node.Text()
 		idx := strings.Index(contents, substring)
-		sub := contents[idx:]
+		if idx > -1 {
+			result, err = ExtractJSON(contents[idx:], jsonType)
+			break
+		}
+	}
 
-		result, err = ExtractJSON(sub, jsonType)
+	return
+}
+
+//
+// ChildFindJSONForScriptWithKey : Find the child JSON key with text containing substring
+//
+func (id *DOM) FindJSONForScriptWithKeyAndDelimiterSet(substring string, delimOpen string, delimClose string) (result JSONMapType, err error) {
+	return id.ChildFindJSONForScriptWithKeyAndDelimiterSet(id.RootNode(), substring, delimOpen, delimClose)
+}
+
+//
+// ChildFindJSONForScriptWithKey : Find the child JSON key with text containing substring
+//
+func (id *DOM) ChildFindJSONForScriptWithKeyAndDelimiterSet(parent *DOMNode, substring string, delimOpen string, delimClose string) (result JSONMapType, err error) {
+	nodes := id.ChildFindWithKey(parent, "script", substring)
+
+	var jsonString string
+
+	for _, node := range nodes {
+		contents := node.Text()
+		idx := strings.Index(contents, substring)
+		if idx > -1 {
+			delimIdx := strings.Index(contents[idx:], delimOpen)
+			if delimIdx > -1 {
+				idx += delimIdx
+				delimIdx = strings.Index(contents[idx:], delimClose)
+				if delimIdx > -1 {
+					jsonString = contents[idx : idx+delimIdx]
+					break
+				}
+			}
+		}
+	}
+
+	if len(jsonString) > 0 {
+		result, err = ExtractJSON("{"+jsonString+"}", JSONDictionaryType)
 	}
 
 	return

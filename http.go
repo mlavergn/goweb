@@ -235,8 +235,10 @@ func (id *HTTP) prepareAndExecuteRequest(contentType string, content *bytes.Buff
 		id.req.Header.Add("Content-Type", contentType)
 	}
 
+	// randomize the user agent
 	uaStr := HTTP_USER_AGENT[rand.Intn(len(HTTP_USER_AGENT))]
 	id.req.Header.Add("User-Agent", uaStr)
+
 	// id.req.Header.Add("Referer", referrer)
 	var err error
 	id.resp, err = client.Do(id.req)
@@ -247,7 +249,7 @@ func (id *HTTP) prepareAndExecuteRequest(contentType string, content *bytes.Buff
 		bytes, _ := ioutil.ReadAll(id.resp.Body)
 		id.RawContents = bytes
 	}
-	// defer s.resp.Body.Close()
+	defer id.resp.Body.Close()
 
 	// at this point we have the request and response, save a record if configured
 	output := "<!--\nMethod: " + id.Method + "\nURL: " + id.URLString() + "\nStatus: " + strconv.Itoa(id.Status()) + "\n-->\n\n" + id.Contents()

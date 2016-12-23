@@ -165,7 +165,7 @@ func TidyScript(jsonString string) (result string) {
 //
 func TidyJSON(jsonString string, jsonType int) (result string) {
 	// JSON improper escaping detected - need to split the string and tidy it
-	if len(jsonString) > 1 { 
+	if len(jsonString) > 1 {
 		var jsonDelimiter []string
 		if jsonType == JSONDictionaryType {
 			// dictionary cleanup
