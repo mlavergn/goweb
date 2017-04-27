@@ -5,13 +5,16 @@ package goweb
 import (
 	"net"
 	"net/http"
+	"time"
 )
 
 //
 // GetClient takes an unused http.Request so we can support GAE
 //
 func GetClient(r *http.Request) (client *http.Client) {
-	client = &http.Client{}
+	client = &http.Client{
+		Timeout: time.Second * 30,
+	}
 
 	return
 }
