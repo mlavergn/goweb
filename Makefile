@@ -15,7 +15,11 @@ build:
 	go build
 
 test:
+ifndef name
 	go test
+else
+	go test -run $(name)
+endif
 
 run:
 	go run
