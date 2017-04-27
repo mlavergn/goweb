@@ -1,4 +1,4 @@
-# goweb
+# Goweb
 --
 ### Web I/O package in pure golang.
 
@@ -6,18 +6,21 @@
 
 Introduction
 --
-Wraps net/http into a higer level class that handles the following:
+Wraps net/http into higer level abstractions that handle the following:
 
 * Redirects
+* Proxies
 * Cookies
 * Relative URLs
 * JSON structures
 * DOM parsing
 
+The goals of Goweb are to be accurate, minimize overhead, and be insanely fast.
+
 Dependencies
 --
 
-* This package depends on golog
+* [golog](http://github.com/mlavergn/golog)
 
 Installation
 --
@@ -26,7 +29,7 @@ Installation
 ```
 
 
-A minimal example
+Examples
 --
 ```go
 
@@ -47,3 +50,7 @@ A minimal example
 	}
 
 ```
+
+License
+--
+The [MIT License](http://choosealicense.com/licenses/mit/)
