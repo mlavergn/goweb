@@ -26,7 +26,7 @@ const (
 )
 
 const (
-	CONTENT_TYPE_DEFAULT    = ""
+	CONTENT_TYPE_NONE       = ""
 	CONTENT_TYPE_FORM       = "application/x-www-form-urlencoded"
 	CONTENT_TYPE_JSON       = "application/json"
 	CONTENT_TYPE_FORM_MULTI = "multipart/form-data"
@@ -125,7 +125,7 @@ func (id *HTTP) URLString() (urlString string) {
 //
 func (id *HTTP) Post(urlString string, args map[string]string) (result string) {
 	content := _formatArgs(args)
-	result = id.PostContent(urlString, CONTENT_TYPE_DEFAULT, content)
+	result = id.PostContent(urlString, CONTENT_TYPE_NONE, content)
 
 	return result
 }
@@ -152,7 +152,7 @@ func (id *HTTP) PostContent(urlString string, contentType string, content *bytes
 	id.tidyURL(urlString)
 
 	result = id.prepareAndExecuteRequest(contentType, content)
-	LogDebugf("\t%d", id.Status())
+	LogDebugf("POST status %d", id.Status())
 
 	return result
 }
@@ -177,8 +177,8 @@ func (id *HTTP) GetQuery(urlString string, args map[string]string) (result strin
 		id.URL.RawQuery = qry.Encode()
 	}
 
-	result = id.prepareAndExecuteRequest(CONTENT_TYPE_DEFAULT, nil)
-	LogDebugf("\t%d", id.Status())
+	result = id.prepareAndExecuteRequest(CONTENT_TYPE_NONE, nil)
+	LogDebugf("GET status %d", id.Status())
 
 	return result
 }
@@ -231,20 +231,27 @@ func (id *HTTP) prepareAndExecuteRequest(contentType string, content *bytes.Buff
 
 	id.req, _ = http.NewRequest(id.Method, id.URLString(), content)
 
-	if len(contentType) > 0 {
-		id.req.Header.Add("Content-Type", contentType)
+	if len(id.URL.Host) > 0 {
+		id.setRequestHeader("Host", id.URL.Host)
 	}
+
+	if len(contentType) > 0 {
+		id.setRequestHeader("Content-Type", contentType)
+	}
+
+	id.setRequestHeader("Connection", "close")
 
 	// randomize the user agent
 	uaStr := HTTP_USER_AGENT[rand.Intn(len(HTTP_USER_AGENT))]
-	id.req.Header.Add("User-Agent", uaStr)
+	id.setRequestHeader("User-Agent", uaStr)
 
-	// id.req.Header.Add("Referer", referrer)
+	// id.setRequestHeader("Referer", referrer)
 	var err error
 	id.resp, err = client.Do(id.req)
 
 	if err != nil && !strings.HasSuffix(err.Error(), " redirect") {
-		LogFatal(err)
+		LogError(err)
+		return ""
 	} else {
 		bytes, _ := ioutil.ReadAll(id.resp.Body)
 		id.RawContents = bytes
@@ -365,20 +372,26 @@ func (id *HTTP) JSON() (result map[string]interface{}, err error) {
 // Header: Extract Content-Type
 //
 func (id *HTTP) ContentType() string {
-	return id.getHeaderValue("Content-Type")
+	return id.GetResponseHeader("Content-Type")
 }
 
 //
 // Header: Extract Hosts
 //
 func (id *HTTP) Host() string {
-	return id.getHeaderValue("Host")
+	return id.GetResponseHeader("Host")
 }
 
 //
 // Header: Extract Status
 //
 func (id *HTTP) Status() int {
+	if id.resp == nil {
+		LogWarn("Response is not available")
+		// return 499 - Client Closed Request
+		return 499
+	}
+
 	return id.resp.StatusCode
 }
 
@@ -386,24 +399,41 @@ func (id *HTTP) Status() int {
 // Header: Extract Location
 //
 func (id *HTTP) Location() string {
-	return id.getHeaderValue("Location")
+	return id.GetResponseHeader("Location")
 }
 
 //
 // Header: Extract Referer
 //
 func (id *HTTP) Referer() string {
-	return id.getHeaderValue("Referer")
+	return id.GetResponseHeader("Referer")
 }
 
 //
 // Header: Extracts a header by key from the response
 //
-func (id *HTTP) getHeaderValue(key string) string {
+func (id *HTTP) GetResponseHeader(key string) string {
+	if id.resp == nil {
+		LogWarn("Response is not available")
+		return ""
+	}
+
 	var result string = ""
 	varr := id.resp.Header[key]
 	if len(varr) > 0 {
 		result = varr[0]
 	}
 	return result
+}
+
+//
+// Header: Sets a header by key in the request
+//
+func (id *HTTP) setRequestHeader(key string, value string) {
+	if id.req == nil {
+		LogWarn("Request is not ready")
+		return
+	}
+
+	id.req.Header.Add(key, value)
 }
